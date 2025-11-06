@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>LeafGuard - Plant Disease Detection</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>LeafGuard 🌿</h1>
+    <p>Upload a leaf image or use your camera to detect disease.</p>
+
+    <input type="file" id="imageInput" accept="image/*" capture="camera" />
+
+    <img id="preview" src="" alt="Image Preview" />
+
+    <button id="analyzeBtn">Analyze Leaf</button>
+
+    <h2 id="result"></h2>
+    <p id="solution"></p>
+  </div>
+
+  <script src="disease_solutions.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
+
