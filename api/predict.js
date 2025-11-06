@@ -1,34 +1,55 @@
-const fetch = require("node-fetch");
-const FormData = require("form-data");
-const formidable = require("formidable");
-const fs = require("fs");
+const MODEL_NAME = "plantvillage-8dgn3-8uzxq";
+const VERSION = "1";
+const API_KEY = "YOUR_API_KEY_HERE"; // replace this with your real Roboflow API key
 
-module.exports = async (req, res) => {
-  if (req.method !== "POST") return res.status(405).send("Method Not Allowed");
+const predictBtn = document.getElementById("predictBtn");
+const imageInput = document.getElementById("imageInput");
+const preview = document.getElementById("preview");
+const result = document.getElementById("result");
+const cameraButton = document.getElementById("cameraButton");
 
-  const form = new formidable.IncomingForm();
-  form.parse(req, async (err, fields, files) => {
-    if (err) return res.status(500).send("Error parsing form data");
+// Camera access
+cameraButton.addEventListener("click", async () => {
+  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+  const video = document.createElement("video");
+  document.body.appendChild(video);
+  video.srcObject = stream;
+  video.play();
+});
 
-    const uploaded = files.file || Object.values(files)[0];
-    if (!uploaded) return res.status(400).send("No file uploaded");
+// Preview image
+imageInput.addEventListener("change", () => {
+  const file = imageInput.files[0];
+  preview.src = URL.createObjectURL(file);
+});
 
-    const fileStream = fs.createReadStream(uploaded.filepath);
+predictBtn.addEventListener("click", async () => {
+  const file = imageInput.files[0];
+  if (!file) {
+    alert("Please upload an image first.");
+    return;
+  }
 
-    const formData = new FormData();
-    formData.append("file", fileStream);
+  result.innerHTML = "Analyzing...";
+  const formData = new FormData();
+  formData.append("file", file);
 
-    const url = `https://classify.roboflow.com/${process.env.MODEL_NAME}/${process.env.VERSION}?api_key=${process.env.RF_API_KEY}`;
-
-    const rfResponse = await fetch(url, {
+  const response = await fetch(
+    `https://detect.roboflow.com/${MODEL_NAME}/${VERSION}?api_key=${API_KEY}`,
+    {
       method: "POST",
       body: formData,
-      headers: formData.getHeaders()
-    });
+    }
+  );
 
-    const text = await rfResponse.text();
-    try { return res.status(rfResponse.status).json(JSON.parse(text)); }
-    catch { return res.status(rfResponse.status).send(text); }
-  });
-};
+  const data = await response.json();
+  console.log(data);
+
+  if (data.predictions && data.predictions.length > 0) {
+    const disease = data.predictions[0].class;
+    result.innerHTML = `<h2>Disease: ${disease}</h2>`;
+  } else {
+    result.innerHTML = `<h2>No disease detected.</h2>`;
+  }
+});
 

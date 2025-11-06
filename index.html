@@ -2,26 +2,26 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>LeafGuard - Plant Disease Detection</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LeafGuard - AI Plant Disease Identifier</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="container">
-    <h1>LeafGuard 🌿</h1>
-    <p>Upload a leaf image or use your camera to detect disease.</p>
+    <h1>🌿 LeafGuard</h1>
+    <p>Upload a leaf photo to detect plant disease.</p>
 
-    <input type="file" id="imageInput" accept="image/*" capture="camera" />
+    <div class="upload-section">
+      <input type="file" id="imageInput" accept="image/*" />
+      <button id="cameraButton">📷 Use Camera</button>
+      <img id="preview" src="" alt="Preview" />
+    </div>
 
-    <img id="preview" src="" alt="Image Preview" />
+    <button id="predictBtn">🔍 Identify Disease</button>
 
-    <button id="analyzeBtn">Analyze Leaf</button>
-
-    <h2 id="result"></h2>
-    <p id="solution"></p>
+    <div id="result"></div>
   </div>
 
-  <script src="disease_solutions.js"></script>
-  <script src="script.js"></script>
+  <script src="predict.js"></script>
 </body>
 </html>
-
