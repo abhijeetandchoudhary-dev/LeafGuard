@@ -1,7 +1,7 @@
 {
   "name": "leafguard",
   "version": "1.0.0",
-  "engines": { "node": "18.x" },
+  "engines": { "node": "22.x" },
   "dependencies": {
     "form-data": "^4.0.0",
     "formidable": "^2.1.1",
