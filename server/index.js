@@ -29,7 +29,7 @@ app.post('/predict', upload.single('file'), async (req, res) => {
     const key = process.env.ROBOFLOW_API_KEY;
     const model = process.env.MODEL_NAME || 'plantvillage-8dgn3-8uzxq';
     const version = process.env.MODEL_VERSION || '1';
-    if (!key || key.startsWith('rf_your_') || key === 'REPLACE_WITH_YOUR_ROBOFLOW_KEY') {
+    if (!key || key.startsWith('rf_your_') || key === 'EyBDSnxhMhx2uAnxCWbl"') {
       // still save the uploaded file so you can inspect locally
       const localPath = path.join(uploadDir, `${Date.now()}-${req.file.originalname}`);
       fs.writeFileSync(localPath, req.file.buffer);
