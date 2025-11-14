@@ -1,7 +1,8 @@
 const MODEL_NAME = "plantvillage-8dgn3-8uzxq";
 const VERSION = "1";
-// IMPORTANT: replace the placeholder below with your Roboflow API key in the browser (keep it private)
-const API_KEY = "REPLACE_WITH_YOUR_ROBOFLOW_KEY";
+// NOTE: Do NOT put your Roboflow API key in client-side code. The frontend
+// posts images to a backend (/predict) which should forward requests to Roboflow
+// using a server-side API key stored in the server environment (see server/.env).
 
 const imageInput = document.getElementById("imageInput");
 const cameraButton = document.getElementById("cameraButton");
@@ -32,8 +33,37 @@ const diseaseSolutions = {
 };
 
 // CAMERA ACCESS
+// CAMERA ACCESS
 cameraButton.addEventListener("click", async () => {
+  // Basic capability checks
+  if (!cameraButton) return console.warn('cameraButton element not found');
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    result.innerHTML = '<p>⚠️ Camera not supported by this browser. Use a recent Chrome/Firefox on HTTPS or localhost.</p>';
+    return;
+  }
+
+  // Secure context check
+  const isLocal = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  if (window.location.protocol !== 'https:' && !isLocal) {
+    result.innerHTML = '<p>⚠️ Camera access requires a secure context (HTTPS) or localhost. Serve the site over HTTPS or use localhost for testing.</p>';
+    return;
+  }
+
   try {
+    // If Permissions API is available, check current state to provide better UX
+    if (navigator.permissions && navigator.permissions.query) {
+      try {
+        const p = await navigator.permissions.query({ name: 'camera' });
+        if (p.state === 'denied') {
+          result.innerHTML = '<p>🔒 Camera permission is blocked for this site. Please check your browser site settings and allow camera access.</p>';
+          return;
+        }
+        // note: state can be 'prompt' or 'granted'
+      } catch (e) {
+        // some browsers may throw for 'camera' permission query — ignore
+      }
+    }
+
     if (!stream) {
       stream = await navigator.mediaDevices.getUserMedia({ video: true });
       const video = document.createElement("video");
@@ -96,10 +126,9 @@ predictBtn.addEventListener("click", async () => {
   predictBtn.disabled = true;
 
   try {
-    const resp = await fetch(
-      `https://detect.roboflow.com/${MODEL_NAME}/${VERSION}?api_key=${API_KEY}`,
-      { method: "POST", body: formData }
-    );
+    // send to local backend which will proxy to Roboflow (keeps API key secret)
+    const BACKEND = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:5000' : '';
+    const resp = await fetch(`${BACKEND}/predict`, { method: "POST", body: formData });
 
     if (!resp.ok) {
       const txt = await resp.text();
