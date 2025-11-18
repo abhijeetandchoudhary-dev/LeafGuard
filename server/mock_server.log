@@ -1,0 +1,9 @@
+nohup: ignoring input
+Mock server listening on http://localhost:5000
+[mock] GET /health from ::1
+[mock] POST /predict from ::1
+[mock] Received 462 bytes in POST /predict
+[mock] POST /predict from ::ffff:127.0.0.1
+[mock] Received 112568 bytes in POST /predict
+[mock] POST /predict from ::ffff:127.0.0.1
+[mock] Received 90152 bytes in POST /predict
