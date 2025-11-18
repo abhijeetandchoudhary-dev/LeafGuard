@@ -2,32 +2,77 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <title>LeafGuard – Plant Disease Identifier</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LeafGuard - AI Plant Disease Identifier</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
-    <h1>🌿 LeafGuard</h1>
-    <p>Upload a leaf photo to detect plant disease.</p>
+  <div class="app-container">
+    <header>
+      <h1>LeafGuard</h1>
+      <p>An AI powered plant disease identifier</p>
+    </header>
 
-    <div class="upload-section">
-      <input type="file" id="imageInput" accept="image/*" />
-      <button id="cameraButton">📷 Use Camera</button>
-      <img id="preview" src="" alt="Preview" />
-    </div>
+    <main>
+      <!-- IMAGE INPUT SECTION -->
+      <section class="input-section">
+        <h2>1. Provide Leaf Image</h2>
 
-    <button id="predictBtn">🔍 Identify Disease</button>
+        <div class="input-options">
+          <!-- File upload -->
+          <div class="input-block">
+            <label for="fileInput" class="btn">Upload Image</label>
+            <input type="file" id="fileInput" accept="image/*" style="display:none" />
+          </div>
 
-    <div id="result"></div>
-    <div id="solution" class="solution"></div>
-    <!-- loader overlay (hidden by default) -->
-    <div id="loader" class="loader hidden" aria-hidden="true" role="status">
-      <div class="spinner" aria-hidden="true"></div>
-      <div class="loader-text">Uploading image and analyzing...</div>
-    </div>
+          <!-- Camera capture -->
+          <div class="input-block">
+            <button id="openCameraBtn" class="btn">Use Camera</button>
+          </div>
+        </div>
+
+        <!-- Camera preview -->
+        <div class="camera-container" id="cameraContainer" style="display:none;">
+          <video id="video" autoplay playsinline></video>
+          <div class="camera-actions">
+            <button id="captureBtn" class="btn">Capture Photo</button>
+            <button id="closeCameraBtn" class="btn-secondary">Close Camera</button>
+          </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="preview-container">
+          <h3>Selected Image Preview</h3>
+          <canvas id="previewCanvas"></canvas>
+        </div>
+
+        <button id="identifyBtn" class="btn primary-btn" disabled>
+          Identify Disease
+        </button>
+      </section>
+
+      <!-- RESULT SECTION -->
+      <section class="result-section">
+        <h2>2. Result</h2>
+        <div id="resultBox" class="result-box">
+          <p>No image processed yet.</p>
+        </div>
+
+        <h3>Suggested Solution</h3>
+        <div id="solutionBox" class="solution-box">
+          <p>Upload or capture a leaf image to view solution.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>Project: Plant Disease Identifier – LeafGuard</p>
+    </footer>
   </div>
 
-  <script src="api/predict.js"></script>
+  <script src="disease_solutions.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
+
+
