@@ -16,21 +16,22 @@ const statusText = document.getElementById("statusText");
 
 const canvasCtx = previewCanvas.getContext("2d");
 
+// Current image as base64 data URL
 let currentBase64Image = null;
 
 // --------------------------------------------------------------
-// 1. FILE UPLOAD HANDLING
+// 1. FILE UPLOAD
 // --------------------------------------------------------------
 fileInput.addEventListener("change", () => {
   const file = fileInput.files[0];
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = function (e) {
+  reader.onload = (e) => {
     const img = new Image();
-    img.onload = function () {
+    img.onload = () => {
       drawImageOnCanvas(img);
-      currentBase64Image = e.target.result;
+      currentBase64Image = e.target.result; // data:image/...;base64,...
       identifyBtn.disabled = false;
       setStatus("Image loaded. Ready to identify.");
     };
@@ -40,7 +41,7 @@ fileInput.addEventListener("change", () => {
 });
 
 // --------------------------------------------------------------
-// 2. CAMERA HANDLING
+// 2. CAMERA
 // --------------------------------------------------------------
 openCameraBtn.addEventListener("click", async () => {
   try {
@@ -50,38 +51,40 @@ openCameraBtn.addEventListener("click", async () => {
     setStatus("Camera opened. Capture a photo.");
   } catch (err) {
     console.error("Camera error:", err);
-    setStatus("Unable to access camera.");
+    setStatus("Unable to access camera (check permission).");
   }
 });
 
-closeCameraBtn && closeCameraBtn.addEventListener("click", () => {
-  stopCamera();
-  cameraContainer.style.display = "none";
-  setStatus("Camera closed.");
-});
+if (closeCameraBtn) {
+  closeCameraBtn.addEventListener("click", () => {
+    stopCamera();
+    cameraContainer.style.display = "none";
+    setStatus("Camera closed.");
+  });
+}
 
-captureBtn && captureBtn.addEventListener("click", () => {
-  if (!videoStream) {
-    setStatus("Camera not active.");
-    return;
-  }
+if (captureBtn) {
+  captureBtn.addEventListener("click", () => {
+    if (!videoStream) {
+      setStatus("Camera not active.");
+      return;
+    }
 
-  const width = video.videoWidth;
-  const height = video.videoHeight;
+    const width = video.videoWidth;
+    const height = video.videoHeight;
 
-  previewCanvas.width = width;
-  previewCanvas.height = height;
+    previewCanvas.width = width;
+    previewCanvas.height = height;
+    canvasCtx.drawImage(video, 0, 0, width, height);
 
-  canvasCtx.drawImage(video, 0, 0, width, height);
-
-  currentBase64Image = previewCanvas.toDataURL("image/jpeg");
-  identifyBtn.disabled = false;
-
-  setStatus("Photo captured. Ready to identify.");
-});
+    currentBase64Image = previewCanvas.toDataURL("image/jpeg");
+    identifyBtn.disabled = false;
+    setStatus("Photo captured. Ready to identify.");
+  });
+}
 
 // --------------------------------------------------------------
-// 3. IDENTIFY DISEASE USING BACKEND
+// 3. IDENTIFY DISEASE (CALL BACKEND)
 // --------------------------------------------------------------
 identifyBtn.addEventListener("click", async () => {
   if (!currentBase64Image) {
@@ -99,11 +102,14 @@ identifyBtn.addEventListener("click", async () => {
       body: JSON.stringify({ image: currentBase64Image }),
     });
 
+    const text = await response.text();
+
     if (!response.ok) {
-      throw new Error("Server responded with " + response.status);
+      // Show the backend error details so we can debug
+      throw new Error(text || `Server responded with ${response.status}`);
     }
 
-    const data = await response.json();
+    const data = JSON.parse(text);
     console.log("Prediction data:", data);
 
     const { predictedClass, confidence } = extractPrediction(data);
@@ -123,7 +129,7 @@ identifyBtn.addEventListener("click", async () => {
 });
 
 // --------------------------------------------------------------
-// Helper: Draw image to Canvas
+// Helper: draw image to canvas (scaled)
 // --------------------------------------------------------------
 function drawImageOnCanvas(img) {
   const maxWidth = 450;
@@ -134,12 +140,11 @@ function drawImageOnCanvas(img) {
 
   previewCanvas.width = width;
   previewCanvas.height = height;
-
   canvasCtx.drawImage(img, 0, 0, width, height);
 }
 
 // --------------------------------------------------------------
-// Helper: Stop camera
+// Helper: stop camera
 // --------------------------------------------------------------
 function stopCamera() {
   if (videoStream) {
@@ -149,44 +154,47 @@ function stopCamera() {
 }
 
 // --------------------------------------------------------------
-// Extract prediction from Roboflow API
+// Extract prediction from Roboflow response
+// (works for both detect + classify in common formats)
 // --------------------------------------------------------------
 function extractPrediction(data) {
   let predictedClass = "Unknown";
   let confidence = null;
 
-  // If model returns detections array
+  // Detection / classification with predictions array
   if (Array.isArray(data.predictions) && data.predictions.length > 0) {
-    predictedClass = data.predictions[0].class || "Unknown";
-    confidence = data.predictions[0].confidence || null;
+    const p = data.predictions[0];
+    predictedClass = p.class || p.label || "Unknown";
+    confidence = p.confidence ?? p.score ?? null;
 
-  // If classification-style response
+  // Some classification endpoints return a 'top' object
   } else if (data.top) {
-    predictedClass = data.top.class || "Unknown";
-    confidence = data.top.confidence || null;
+    predictedClass = data.top.class || data.top.label || "Unknown";
+    confidence = data.top.confidence ?? data.top.score ?? null;
   }
 
   return { predictedClass, confidence };
 }
 
 // --------------------------------------------------------------
-// Update UI: Result
+// Update Result UI
 // --------------------------------------------------------------
 function updateResult(predictedClass, confidence, raw) {
-  let confText = confidence
+  const confText = confidence
     ? ` (${(confidence * 100).toFixed(1)}% confidence)`
     : "";
 
   resultBox.innerHTML = `
     <p><strong>Disease:</strong> ${predictedClass}${confText}</p>
-    <details><summary>View raw response</summary>
+    <details>
+      <summary>View raw response</summary>
       <pre>${JSON.stringify(raw, null, 2)}</pre>
     </details>
   `;
 }
 
 // --------------------------------------------------------------
-// Update UI: Suggested Solution
+// Update Solution UI using DISEASE_SOLUTIONS mapping
 // --------------------------------------------------------------
 function updateSolution(predictedClass) {
   const key = predictedClass.toLowerCase().trim();
@@ -197,16 +205,18 @@ function updateSolution(predictedClass) {
   } else {
     solutionBox.innerHTML = `
       No specific remedy found for <strong>${predictedClass}</strong>.
-      Consult agricultural guidance or experts.
+      Use this prediction as a hint and consult local agricultural guidance.
     `;
   }
 }
 
 // --------------------------------------------------------------
-// Status update
+// Status helper
 // --------------------------------------------------------------
 function setStatus(msg) {
   console.log("[STATUS]", msg);
-  if (statusText) statusText.textContent = msg;
+  if (statusText) {
+    statusText.textContent = msg;
+  }
 }
 
