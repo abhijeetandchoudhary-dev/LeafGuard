@@ -28,15 +28,17 @@ export default async function handler(req, res) {
     }
 
     const url = `https://classify.roboflow.com/${modelId}?api_key=${apiKey}`;
-
+     
     const rfResponse = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body: `base64=${encodeURIComponent(base64Data)}`
-    });
+  method: "POST",
+  headers: {
+    // Roboflow classify endpoint accepts plain base64 in the body
+    "Content-Type": "text/plain"
+  },
+  body: base64Data   // <- just the raw base64 string, nothing else
+});
 
+         
     const text = await rfResponse.text();
 
     if (!rfResponse.ok) {
