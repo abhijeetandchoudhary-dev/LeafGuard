@@ -20,6 +20,8 @@ const solutionBox = document.getElementById("solutionBox");
 const statusText = document.getElementById("statusText");
 const loader = document.getElementById("loader");
 const uploadTile = document.querySelector(".upload-tile");
+const mascot = document.getElementById("leafMascot");
+const heroPanel = document.querySelector(".panel--hero");
 
 const canvasCtx = previewCanvas.getContext("2d");
 
@@ -276,9 +278,17 @@ function updateSolution(predictedClass) {
   //   Apple_scab → "apple scab"
   const underscored = raw.replace(/_/g, " ").replace(/\s+/g, " ").trim();
 
+  // Handle known naming differences between model labels and our keys
+  // e.g. model: "pepper bell healthy" vs key: "bell pepper healthy"
+  let reordered = underscored;
+  if (reordered.startsWith("pepper bell")) {
+    reordered = reordered.replace(/^pepper bell/, "bell pepper");
+  }
+
   const candidates = [
     raw,
     underscored,
+    reordered,
   ];
 
   let solution = null;
@@ -310,5 +320,44 @@ function setStatus(msg) {
 
 function toggleLoader(show) {
   loader?.classList.toggle("hidden", !show);
+}
+
+// --------------------------------------------------------------
+// 5. Mascot: follow cursor & emote
+// --------------------------------------------------------------
+if (mascot && heroPanel) {
+  let targetX = 0;
+  let targetY = 0;
+  let currentX = 0;
+  let currentY = 0;
+  let lastWiggle = 0;
+
+  document.addEventListener("mousemove", (event) => {
+    const rect = heroPanel.getBoundingClientRect();
+    const clampedX = Math.min(Math.max(event.clientX, rect.left), rect.right);
+    const clampedY = Math.min(Math.max(event.clientY, rect.top), rect.bottom);
+
+    const relX = ((clampedX - rect.left) / rect.width - 0.5) * 32; // px offset
+    const relY = ((clampedY - rect.top) / rect.height - 0.2) * 18;
+
+    targetX = relX;
+    targetY = relY;
+  });
+
+  function animateMascot(timestamp) {
+    const ease = 0.08;
+    currentX += (targetX - currentX) * ease;
+    currentY += (targetY - currentY) * ease;
+    mascot.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+
+    if (!lastWiggle || timestamp - lastWiggle > 3500) {
+      lastWiggle = timestamp;
+      mascot.classList.toggle("mascot--surprised", Math.random() < 0.35);
+    }
+
+    requestAnimationFrame(animateMascot);
+  }
+
+  requestAnimationFrame(animateMascot);
 }
 
