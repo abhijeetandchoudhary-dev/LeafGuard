@@ -1,10 +1,15 @@
-// script.js
+const MIN_CONFIDENCE = 0.7;
+const MIN_GREEN_RATIO = 0.13;
+const SAMPLE_STEP = 24;
 
 let videoStream = null;
+let desiredFacingMode = "environment";
+let currentBase64Image = null;
 
 const fileInput = document.getElementById("fileInput");
 const openCameraBtn = document.getElementById("openCameraBtn");
 const closeCameraBtn = document.getElementById("closeCameraBtn");
+const switchCameraBtn = document.getElementById("switchCameraBtn");
 const captureBtn = document.getElementById("captureBtn");
 const identifyBtn = document.getElementById("identifyBtn");
 const cameraContainer = document.getElementById("cameraContainer");
@@ -13,87 +18,134 @@ const previewCanvas = document.getElementById("previewCanvas");
 const resultBox = document.getElementById("resultBox");
 const solutionBox = document.getElementById("solutionBox");
 const statusText = document.getElementById("statusText");
+const loader = document.getElementById("loader");
+const uploadTile = document.querySelector(".upload-tile");
 
 const canvasCtx = previewCanvas.getContext("2d");
 
-// Current image as base64 data URL
-let currentBase64Image = null;
+// --------------------------------------------------------------
+// 1. FILE UPLOAD + DRAG DROP
+// --------------------------------------------------------------
+fileInput?.addEventListener("change", handleFileSelection);
 
-// --------------------------------------------------------------
-// 1. FILE UPLOAD
-// --------------------------------------------------------------
-fileInput.addEventListener("change", () => {
-  const file = fileInput.files[0];
-  if (!file) return;
+["dragenter", "dragover"].forEach((eventName) => {
+  uploadTile?.addEventListener(eventName, (event) => {
+    event.preventDefault();
+    uploadTile.classList.add("drag-active");
+  });
+});
+
+["dragleave", "drop"].forEach((eventName) => {
+  uploadTile?.addEventListener(eventName, (event) => {
+    event.preventDefault();
+    uploadTile.classList.remove("drag-active");
+  });
+});
+
+uploadTile?.addEventListener("drop", (event) => {
+  const file = event.dataTransfer?.files?.[0];
+  if (file) processFile(file);
+});
+
+function handleFileSelection() {
+  const file = fileInput.files?.[0];
+  if (file) processFile(file);
+}
+
+function processFile(file) {
+  if (!file.type.startsWith("image/")) {
+    setStatus("Please choose an image file.");
+    return;
+  }
 
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = ({ target }) => {
     const img = new Image();
     img.onload = () => {
       drawImageOnCanvas(img);
-      currentBase64Image = e.target.result; // data:image/...;base64,...
-      identifyBtn.disabled = false;
-      setStatus("Image loaded. Ready to identify.");
+      currentBase64Image = target.result;
+      validateCanvasForPrediction();
     };
-    img.src = e.target.result;
+    img.src = target.result;
   };
   reader.readAsDataURL(file);
-});
+}
 
 // --------------------------------------------------------------
 // 2. CAMERA
 // --------------------------------------------------------------
-openCameraBtn.addEventListener("click", async () => {
-  try {
-    videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
-    video.srcObject = videoStream;
-    cameraContainer.style.display = "block";
-    setStatus("Camera opened. Capture a photo.");
-  } catch (err) {
-    console.error("Camera error:", err);
-    setStatus("Unable to access camera (check permission).");
+openCameraBtn?.addEventListener("click", () => startCamera(desiredFacingMode));
+
+switchCameraBtn?.addEventListener("click", async () => {
+  desiredFacingMode = desiredFacingMode === "environment" ? "user" : "environment";
+  if (videoStream) {
+    await startCamera(desiredFacingMode);
   }
 });
 
-if (closeCameraBtn) {
-  closeCameraBtn.addEventListener("click", () => {
+closeCameraBtn?.addEventListener("click", () => {
+  stopCamera();
+  cameraContainer.hidden = true;
+  setStatus("Camera closed.");
+});
+
+captureBtn?.addEventListener("click", () => {
+  if (!videoStream) {
+    setStatus("Camera not active.");
+    return;
+  }
+  const width = video.videoWidth;
+  const height = video.videoHeight;
+  previewCanvas.width = width;
+  previewCanvas.height = height;
+  canvasCtx.drawImage(video, 0, 0, width, height);
+  currentBase64Image = previewCanvas.toDataURL("image/jpeg");
+  validateCanvasForPrediction(true);
+});
+
+async function startCamera(facingMode = "environment") {
+  try {
     stopCamera();
-    cameraContainer.style.display = "none";
-    setStatus("Camera closed.");
-  });
+    const constraints = {
+      video: { facingMode: { ideal: facingMode } },
+      audio: false,
+    };
+    videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+    video.srcObject = videoStream;
+    cameraContainer.hidden = false;
+    captureBtn.disabled = false;
+    closeCameraBtn.disabled = false;
+    switchCameraBtn.disabled = false;
+    setStatus(`Camera ready (${facingMode === "environment" ? "back" : "front"} lens).`);
+  } catch (error) {
+    console.error("Camera error:", error);
+    setStatus("Unable to access camera. Check permissions or reload.");
+    captureBtn.disabled = true;
+  }
 }
 
-if (captureBtn) {
-  captureBtn.addEventListener("click", () => {
-    if (!videoStream) {
-      setStatus("Camera not active.");
-      return;
-    }
-
-    const width = video.videoWidth;
-    const height = video.videoHeight;
-
-    previewCanvas.width = width;
-    previewCanvas.height = height;
-    canvasCtx.drawImage(video, 0, 0, width, height);
-
-    currentBase64Image = previewCanvas.toDataURL("image/jpeg");
-    identifyBtn.disabled = false;
-    setStatus("Photo captured. Ready to identify.");
-  });
+function stopCamera() {
+  if (videoStream) {
+    videoStream.getTracks().forEach((track) => track.stop());
+    videoStream = null;
+  }
+  captureBtn.disabled = true;
+  closeCameraBtn.disabled = true;
+  switchCameraBtn.disabled = true;
 }
 
 // --------------------------------------------------------------
 // 3. IDENTIFY DISEASE (CALL BACKEND)
 // --------------------------------------------------------------
-identifyBtn.addEventListener("click", async () => {
+identifyBtn?.addEventListener("click", async () => {
   if (!currentBase64Image) {
     setStatus("Please select or capture an image first.");
     return;
   }
 
   identifyBtn.disabled = true;
-  setStatus("Identifying disease...");
+  toggleLoader(true);
+  setStatus("Identifying disease…");
 
   try {
     const response = await fetch("/api/predict", {
@@ -103,71 +155,84 @@ identifyBtn.addEventListener("click", async () => {
     });
 
     const text = await response.text();
-
-    if (!response.ok) {
-      // Show the backend error details so we can debug
-      throw new Error(text || `Server responded with ${response.status}`);
-    }
+    if (!response.ok) throw new Error(text || `Server responded with ${response.status}`);
 
     const data = JSON.parse(text);
-    console.log("Prediction data:", data);
-
     const { predictedClass, confidence } = extractPrediction(data);
-
     updateResult(predictedClass, confidence, data);
     updateSolution(predictedClass);
-
     setStatus("Prediction complete.");
-  } catch (err) {
-    console.error(err);
-    resultBox.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
-    solutionBox.innerHTML = `<p style="color:red;">No solution available due to error.</p>`;
-    setStatus("Error occurred.");
+  } catch (error) {
+    console.error(error);
+    resultBox.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+    solutionBox.innerHTML = `<p class="error">No solution because of the error above.</p>`;
+    setStatus("Prediction failed. Try again.");
+  } finally {
+    identifyBtn.disabled = false;
+    toggleLoader(false);
   }
-
-  identifyBtn.disabled = false;
 });
 
 // --------------------------------------------------------------
-// Helper: draw image to canvas (scaled)
+// Helpers
 // --------------------------------------------------------------
 function drawImageOnCanvas(img) {
-  const maxWidth = 450;
+  const maxWidth = 720;
   const scale = Math.min(maxWidth / img.width, 1);
-
   const width = img.width * scale;
   const height = img.height * scale;
-
   previewCanvas.width = width;
   previewCanvas.height = height;
   canvasCtx.drawImage(img, 0, 0, width, height);
 }
 
-// --------------------------------------------------------------
-// Helper: stop camera
-// --------------------------------------------------------------
-function stopCamera() {
-  if (videoStream) {
-    videoStream.getTracks().forEach((track) => track.stop());
-    videoStream = null;
+function validateCanvasForPrediction(fromCamera = false) {
+  const width = previewCanvas.width;
+  const height = previewCanvas.height;
+  if (!width || !height) return;
+
+  const hasLeaf = isLeafDominant(width, height);
+  if (!hasLeaf) {
+    identifyBtn.disabled = true;
+    setStatus("Image does not look like a single leaf. Try again.");
+    return;
+  }
+
+  identifyBtn.disabled = false;
+  setStatus(fromCamera ? "Photo captured. Ready to identify." : "Image loaded. Ready to identify.");
+}
+
+function isLeafDominant(width, height) {
+  try {
+    const imageData = canvasCtx.getImageData(0, 0, width, height);
+    const { data } = imageData;
+    let sampled = 0;
+    let greenishPixels = 0;
+
+    for (let i = 0; i < data.length; i += SAMPLE_STEP * 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      if (g > 70 && g > r * 1.1 && g > b * 1.05) greenishPixels += 1;
+      sampled += 1;
+    }
+
+    const ratio = sampled ? greenishPixels / sampled : 0;
+    return ratio >= MIN_GREEN_RATIO;
+  } catch (err) {
+    console.warn("Leaf heuristic failed:", err);
+    return true;
   }
 }
 
-// --------------------------------------------------------------
-// Extract prediction from Roboflow response
-// (works for both detect + classify in common formats)
-// --------------------------------------------------------------
 function extractPrediction(data) {
   let predictedClass = "Unknown";
   let confidence = null;
 
-  // Detection / classification with predictions array
   if (Array.isArray(data.predictions) && data.predictions.length > 0) {
     const p = data.predictions[0];
     predictedClass = p.class || p.label || "Unknown";
     confidence = p.confidence ?? p.score ?? null;
-
-  // Some classification endpoints return a 'top' object
   } else if (data.top) {
     predictedClass = data.top.class || data.top.label || "Unknown";
     confidence = data.top.confidence ?? data.top.score ?? null;
@@ -176,26 +241,33 @@ function extractPrediction(data) {
   return { predictedClass, confidence };
 }
 
-// --------------------------------------------------------------
-// Update Result UI
-// --------------------------------------------------------------
 function updateResult(predictedClass, confidence, raw) {
-  const confText = confidence
-    ? ` (${(confidence * 100).toFixed(1)}% confidence)`
+  let confText = "";
+  if (confidence !== null && !Number.isNaN(confidence)) {
+    confText = ` (${(confidence * 100).toFixed(1)}% confidence)`;
+  }
+
+  const belowThreshold = typeof confidence === "number" && confidence < MIN_CONFIDENCE;
+  const caution = belowThreshold
+    ? `<p class="warning">Confidence is below ${(MIN_CONFIDENCE * 100).toFixed(0)}%. Retake the photo in better lighting.</p>`
     : "";
 
   resultBox.innerHTML = `
     <p><strong>Disease:</strong> ${predictedClass}${confText}</p>
+    ${caution}
     <details>
       <summary>View raw response</summary>
       <pre>${JSON.stringify(raw, null, 2)}</pre>
     </details>
   `;
+
+  if (belowThreshold) {
+    solutionBox.innerHTML = `
+      Prediction confidence is low. Capture a clearer photo and try again.
+    `;
+  }
 }
 
-// --------------------------------------------------------------
-// Update Solution UI using DISEASE_SOLUTIONS mapping
-// --------------------------------------------------------------
 function updateSolution(predictedClass) {
   const key = predictedClass.toLowerCase().trim();
   const solution = DISEASE_SOLUTIONS[key];
@@ -210,13 +282,14 @@ function updateSolution(predictedClass) {
   }
 }
 
-// --------------------------------------------------------------
-// Status helper
-// --------------------------------------------------------------
 function setStatus(msg) {
   console.log("[STATUS]", msg);
   if (statusText) {
     statusText.textContent = msg;
   }
+}
+
+function toggleLoader(show) {
+  loader?.classList.toggle("hidden", !show);
 }
 

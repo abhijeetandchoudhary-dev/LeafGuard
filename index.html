@@ -1,266 +1,104 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>LeafGuard – AI Plant Disease Identifier</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <style>
-    /* --- PAGE BACKGROUND --- */
-    * {
-      box-sizing: border-box;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: radial-gradient(circle at top, #404040 0, #111 55%);
-    }
-
-    /* --- CENTER CARD --- */
-    .card {
-      width: 480px;
-      max-width: 90vw;
-      background: #fdfdfd;
-      border-radius: 18px;
-      box-shadow: 0 16px 35px rgba(0, 0, 0, 0.28);
-      padding: 26px 28px 24px;
-      animation: cardIn 0.45s ease-out;
-    }
-
-    @keyframes cardIn {
-      from { opacity: 0; transform: translateY(18px) scale(0.98); }
-      to   { opacity: 1; transform: translateY(0) scale(1); }
-    }
-
-    /* --- HEADER --- */
-    .card-header {
-      display: flex;
-      align-items: center;
-      margin-bottom: 10px;
-    }
-
-    .logo-circle {
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      background: #25a244;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-size: 20px;
-      margin-right: 10px;
-    }
-
-    .title {
-      font-size: 1.5rem;
-      font-weight: 650;
-      color: #14833b;
-    }
-
-    .subtitle {
-      margin: 4px 0 14px;
-      font-size: 0.93rem;
-      color: #555;
-    }
-
-    /* --- TOP ROW: FILE + CAMERA + PREVIEW --- */
-    .top-row {
-      display: grid;
-      grid-template-columns: minmax(0, 1.4fr) auto auto;
-      column-gap: 10px;
-      align-items: center;
-      margin-bottom: 16px;
-    }
-
-    .top-row input[type="file"] {
-      width: 100%;
-      font-size: 0.85rem;
-    }
-
-    .btn {
-      border: none;
-      cursor: pointer;
-      border-radius: 6px;
-      padding: 9px 14px;
-      font-size: 0.9rem;
-      font-weight: 500;
-      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      white-space: nowrap;
-    }
-
-    .btn-primary {
-      background: #25a244;
-      color: #fff;
-      box-shadow: 0 3px 10px rgba(6, 95, 32, 0.45);
-    }
-
-    .btn-primary:hover {
-      background: #1b7a33;
-      transform: translateY(-1px);
-      box-shadow: 0 5px 14px rgba(6, 95, 32, 0.55);
-    }
-
-    .btn-primary:disabled {
-      opacity: 0.6;
-      cursor: default;
-      box-shadow: none;
-      transform: none;
-    }
-
-    .preview-label {
-      font-size: 0.88rem;
-      color: #666;
-    }
-
-    /* --- PREVIEW AREA --- */
-    .preview-box {
-      border-radius: 10px;
-      border: 1px dashed #cfcfcf;
-      background: #fafafa;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 200px;
-      margin-bottom: 14px;
-      overflow: hidden;
-    }
-
-    #previewCanvas {
-      max-width: 100%;
-      max-height: 100%;
-      display: block;
-    }
-
-    /* --- IDENTIFY BUTTON --- */
-    .identify-row {
-      margin-bottom: 10px;
-    }
-
-    .identify-row .btn-primary {
-      width: 100%;
-      padding: 11px 16px;
-      font-size: 1rem;
-    }
-
-    /* --- RESULT AREA --- */
-    .result-title {
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: #333;
-      margin: 8px 0 4px;
-    }
-
-    .result-box, .solution-box {
-      border-radius: 10px;
-      padding: 8px 10px;
-      background: #f4f9f4;
-      font-size: 0.9rem;
-      color: #333;
-      max-height: 140px;
-      overflow-y: auto;
-      border: 1px solid #dde8dd;
-    }
-
-    .solution-box {
-      margin-top: 6px;
-    }
-
-    .status-text {
-      margin-top: 6px;
-      font-size: 0.8rem;
-      color: #777;
-      font-style: italic;
-    }
-
-    details summary {
-      cursor: pointer;
-      font-size: 0.85rem;
-      color: #555;
-      margin-top: 4px;
-    }
-
-    pre {
-      font-size: 0.75rem;
-      background: #f0f0f0;
-      padding: 6px;
-      border-radius: 6px;
-      overflow-x: auto;
-    }
-
-    @media (max-width: 520px) {
-      .card {
-        padding: 20px 18px 18px;
-      }
-      .top-row {
-        grid-template-columns: 1fr;
-        row-gap: 8px;
-        align-items: stretch;
-      }
-      .preview-label {
-        text-align: left;
-      }
-    }
-  </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LeafGuard – Plant Disease Identifier</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
-  <div class="card">
-    <div class="card-header">
-      <div class="logo-circle">🌿</div>
-      <div class="title">LeafGuard</div>
-    </div>
-    <p class="subtitle">Upload a leaf photo to detect plant disease.</p>
+  <div class="bg-grid" aria-hidden="true"></div>
 
-    <!-- top row: file + camera + preview label -->
-    <div class="top-row">
-      <input type="file" id="fileInput" accept="image/*" />
-      <button id="openCameraBtn" class="btn btn-primary">Use Camera</button>
-      <div class="preview-label">Preview</div>
-    </div>
+  <main class="app-shell">
+    <section class="panel panel--hero">
+      <p class="eyebrow">LeafGuard</p>
+      <h1>Diagnose plant stress with AI in seconds</h1>
+      <p class="lead">
+        Upload a close photo of a single leaf or capture one live.
+        We’ll analyze it, highlight the most likely disease, and share the fastest remedy.
+      </p>
 
-    <!-- camera video element (hidden by JS until used) -->
-    <div id="cameraContainer" style="display:none; margin-bottom:10px;">
-      <video id="video" autoplay playsinline style="width:100%; border-radius:10px;"></video>
-      <div style="display:flex; gap:8px; margin-top:6px;">
-        <button id="captureBtn" class="btn btn-primary" style="flex:1;">Capture Photo</button>
-        <button id="closeCameraBtn" class="btn" style="flex:1; background:#e2e2e2;">Close Camera</button>
+      <ul class="steps">
+        <li><span>1</span>Select or capture a sharp photo</li>
+        <li><span>2</span>Let LeafGuard run detection</li>
+        <li><span>3</span>Review guidance & next steps</li>
+      </ul>
+    </section>
+
+    <section class="panel panel--interaction">
+      <header class="panel-header">
+        <div class="logo-circle">🌿</div>
+        <div>
+          <h2>Plant health lab</h2>
+          <p>Supports 38+ PlantVillage diseases</p>
+        </div>
+      </header>
+
+      <label class="upload-tile">
+        <input type="file" id="fileInput" accept="image/*" hidden />
+        <span class="upload-icon">⬆️</span>
+        <div>
+          <strong>Drop or choose image</strong>
+          <p>PNG / JPG up to 5 MB</p>
+        </div>
+      </label>
+
+      <div class="camera-controls">
+        <button id="openCameraBtn" class="btn primary">Open camera</button>
+        <button id="switchCameraBtn" class="btn ghost" disabled>Switch lens</button>
+        <button id="closeCameraBtn" class="btn ghost" disabled>Close</button>
       </div>
-    </div>
 
-    <!-- preview box -->
-    <div class="preview-box">
-      <canvas id="previewCanvas"></canvas>
-    </div>
+      <div id="cameraContainer" class="camera-surface" hidden>
+        <video id="video" autoplay playsinline></video>
+        <div class="camera-actions">
+          <button id="captureBtn" class="btn primary" disabled>Capture</button>
+        </div>
+      </div>
 
-    <!-- identify button -->
-    <div class="identify-row">
-      <button id="identifyBtn" class="btn btn-primary" disabled>Identify Disease</button>
-    </div>
+      <div class="preview-stack">
+        <div class="preview-box">
+          <canvas id="previewCanvas"></canvas>
+        </div>
+        <div id="imageHints" class="preview-meta">
+          <strong>Tips for best accuracy</strong>
+          <ul>
+            <li>Fill the frame with a single leaf</li>
+            <li>Use daylight, avoid harsh glare</li>
+            <li>Keep the background plain</li>
+          </ul>
+        </div>
+      </div>
 
-    <div class="result-title">Result</div>
-    <div id="resultBox" class="result-box">
-      No image processed yet.
-    </div>
+      <div class="action-row">
+        <button id="identifyBtn" class="btn primary large" disabled>Identify disease</button>
+        <span id="statusText" class="status-text" role="status">No image selected yet.</span>
+      </div>
 
-    <div class="result-title" style="margin-top:8px;">Suggested Solution</div>
-    <div id="solutionBox" class="solution-box">
-      Upload or capture an image to view solutions.
-    </div>
+      <div class="result-grid">
+        <article>
+          <h3>Result</h3>
+          <div id="resultBox" class="result-box">
+            No image processed yet.
+          </div>
+        </article>
 
-    <div id="statusText" class="status-text"></div>
+        <article>
+          <h3>Suggested remedy</h3>
+          <div id="solutionBox" class="solution-box">
+            Upload or capture an image to view solutions.
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <div id="loader" class="loader hidden" aria-live="assertive">
+    <div class="spinner" role="presentation"></div>
+    <p>Analyzing leaf…</p>
   </div>
 
-  <!-- your JS files -->
   <script src="disease_solutions.js"></script>
-  <script src="script.js"></script>
+  <script src="script.js" type="module"></script>
 </body>
 </html>
