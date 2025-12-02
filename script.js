@@ -323,41 +323,44 @@ function toggleLoader(show) {
 }
 
 // --------------------------------------------------------------
-// 5. Mascot: follow cursor & emote
+// 5. Mascot: big eyes follow cursor & happy on hover
 // --------------------------------------------------------------
 if (mascot && heroPanel) {
-  let targetX = 0;
-  let targetY = 0;
-  let currentX = 0;
-  let currentY = 0;
-  let lastWiggle = 0;
+  const eyes = document.querySelectorAll(".mascot .eye");
+  if (eyes.length) {
+    let targetX = 0;
+    let targetY = 0;
+    let currentX = 0;
+    let currentY = 0;
 
-  document.addEventListener("mousemove", (event) => {
-    const rect = heroPanel.getBoundingClientRect();
-    const clampedX = Math.min(Math.max(event.clientX, rect.left), rect.right);
-    const clampedY = Math.min(Math.max(event.clientY, rect.top), rect.bottom);
+    document.addEventListener("mousemove", (event) => {
+      const rect = heroPanel.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
 
-    const relX = ((clampedX - rect.left) / rect.width - 0.5) * 32; // px offset
-    const relY = ((clampedY - rect.top) / rect.height - 0.2) * 18;
+      const dx = event.clientX - centerX;
+      const dy = event.clientY - centerY;
+      const maxOffset = 4; // px
+      const distance = Math.hypot(dx, dy) || 1;
 
-    targetX = relX;
-    targetY = relY;
-  });
+      targetX = (dx / distance) * maxOffset;
+      targetY = (dy / distance) * maxOffset;
+    });
 
-  function animateMascot(timestamp) {
-    const ease = 0.08;
-    currentX += (targetX - currentX) * ease;
-    currentY += (targetY - currentY) * ease;
-    mascot.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+    function animateEyes() {
+      const ease = 0.18;
+      currentX += (targetX - currentX) * ease;
+      currentY += (targetY - currentY) * ease;
 
-    if (!lastWiggle || timestamp - lastWiggle > 3500) {
-      lastWiggle = timestamp;
-      mascot.classList.toggle("mascot--surprised", Math.random() < 0.35);
+      eyes.forEach((eye) => {
+        eye.style.setProperty("--eye-offset-x", `${currentX}px`);
+        eye.style.setProperty("--eye-offset-y", `${currentY}px`);
+      });
+
+      requestAnimationFrame(animateEyes);
     }
 
-    requestAnimationFrame(animateMascot);
+    requestAnimationFrame(animateEyes);
   }
-
-  requestAnimationFrame(animateMascot);
 }
 

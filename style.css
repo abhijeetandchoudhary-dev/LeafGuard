@@ -127,8 +127,6 @@ h1 {
 .mascot {
   width: 120px;
   position: relative;
-  transform: translate3d(0, 0, 0);
-  transition: transform 180ms ease-out;
 }
 
 .mascot-plant {
@@ -164,8 +162,8 @@ h1 {
 }
 
 .eye {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: #0d1a11;
   position: relative;
@@ -175,12 +173,17 @@ h1 {
 .eye::after {
   content: "";
   position: absolute;
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: #fff;
-  top: 3px;
-  left: 5px;
+  top: 4px;
+  left: 6px;
+  transform: translate(
+    var(--eye-offset-x, 0px),
+    var(--eye-offset-y, 0px)
+  );
+  transition: transform 80ms linear;
 }
 
 .mouth {
@@ -192,14 +195,14 @@ h1 {
   margin-left: -16px;
   border-radius: 0 0 40px 40px;
   border-bottom: 3px solid #0d1a11;
+  transition: all 160ms ease-out;
 }
 
-.mascot--surprised .mouth {
-  width: 16px;
-  height: 16px;
-  margin-left: -8px;
-  border-radius: 50%;
-  border: 3px solid #0d1a11;
+.mascot:hover .mouth {
+  width: 40px;
+  height: 22px;
+  margin-left: -20px;
+  border-bottom-width: 4px;
 }
 
 .mascot-caption {
