@@ -269,8 +269,27 @@ function updateResult(predictedClass, confidence, raw) {
 }
 
 function updateSolution(predictedClass) {
-  const key = predictedClass.toLowerCase().trim();
-  const solution = DISEASE_SOLUTIONS[key];
+  const raw = predictedClass?.toLowerCase().trim() || "";
+
+  // Try multiple key shapes so we match PlantVillage-style labels:
+  //   Tomato___Early_blight → "tomato early blight"
+  //   Apple_scab → "apple scab"
+  const underscored = raw.replace(/_/g, " ").replace(/\s+/g, " ").trim();
+
+  const candidates = [
+    raw,
+    underscored,
+  ];
+
+  let solution = null;
+  let matchedKey = null;
+  for (const key of candidates) {
+    if (DISEASE_SOLUTIONS[key]) {
+      solution = DISEASE_SOLUTIONS[key];
+      matchedKey = key;
+      break;
+    }
+  }
 
   if (solution) {
     solutionBox.innerHTML = `<strong>${predictedClass}</strong><br>${solution}`;
