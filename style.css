@@ -127,6 +127,7 @@ h1 {
 .mascot {
   width: 120px;
   position: relative;
+  animation: mascotFloat 5.2s ease-in-out infinite;
 }
 
 .mascot-plant {
@@ -186,6 +187,17 @@ h1 {
   transition: transform 80ms linear;
 }
 
+.eye::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--primary);
+  transform-origin: top;
+  animation: blink 6s ease-in-out infinite;
+  opacity: 0.9;
+  border-radius: 50%;
+}
+
 .mouth {
   position: absolute;
   left: 50%;
@@ -203,6 +215,30 @@ h1 {
   height: 22px;
   margin-left: -20px;
   border-bottom-width: 4px;
+}
+
+@keyframes mascotFloat {
+  0% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(-1deg);
+  }
+  100% {
+    transform: translateY(0px) rotate(1deg);
+  }
+}
+
+@keyframes blink {
+  0%, 90%, 100% {
+    transform: scaleY(0);
+  }
+  93% {
+    transform: scaleY(1);
+  }
+  96% {
+    transform: scaleY(0);
+  }
 }
 
 .mascot-caption {

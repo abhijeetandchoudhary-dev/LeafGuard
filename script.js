@@ -257,10 +257,6 @@ function updateResult(predictedClass, confidence, raw) {
   resultBox.innerHTML = `
     <p><strong>Disease:</strong> ${predictedClass}${confText}</p>
     ${caution}
-    <details>
-      <summary>View raw response</summary>
-      <pre>${JSON.stringify(raw, null, 2)}</pre>
-    </details>
   `;
 
   if (belowThreshold) {
